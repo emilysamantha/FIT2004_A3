@@ -40,26 +40,22 @@ def allocate(availability):
 
     :Approach:
     """
-    # graph = generate_network(availability)
-    # breakfast, dinner, max_flow = ford_fulkerson(availability, graph, 0, len(graph) - 1, len(availability))
-
     # GENERAL INFORMATION
     num_persons = 5
     n = len(availability)  # n is the number of days
 
     # REQUIREMENTS
     min_meals = math.floor(0.36 * n)
-    max_meals = math.ceil(0.44 * n)
     demand_min_flow = min_meals * num_persons             # represents the minimum meals to be prepared by all roommates
     demand_adjusted = (n * 2) - (min_meals * num_persons) # represents the rest of meals to be prepared
 
+    # Generating network flow with capacity equal to the lower bound
     graph_min_flow = generate_network_min_flow(availability)
-    breakfast_min_flow, dinner_min_flow, max_flow_min = ford_fulkerson(availability, graph_min_flow, 0,
-                                                                       len(graph_min_flow) - 1, len(availability))
+    breakfast_min_flow, dinner_min_flow, max_flow_min = ford_fulkerson(availability, graph_min_flow)
 
+    # Generating network flow with adjusted capacities
     graph_adjusted = generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
-    breakfast_adjusted, dinner_adjusted, max_flow_adjusted = ford_fulkerson(availability, graph_adjusted, 0,
-                                                                        len(graph_adjusted) - 1, len(availability))
+    breakfast_adjusted, dinner_adjusted, max_flow_adjusted = ford_fulkerson(availability, graph_adjusted)
 
     # Check if the outgoing edges from the source are saturated in both graph_min_flow and graph_adjusted
     if max_flow_min < demand_min_flow or max_flow_adjusted < demand_adjusted:
@@ -92,15 +88,12 @@ def generate_network_min_flow(availability):
 
     # REQUIREMENTS
     min_meals = math.floor(0.36 * n)
-    max_meals = math.ceil(0.44 * n)
-    max_order = math.ceil(0.1 * n)
     demand = min_meals * num_persons  # represents the minimum meals to be prepared by all roommates
 
     # NODE INFORMATION
     source_node = 0
     meals_node = 1
     start_person_nodes = 2
-    order_option_node = 7
     start_day_nodes = 8
     start_meal_nodes = start_day_nodes + n
     num_nodes = 1 + 1 + (num_persons + 1) + (n * 3) + 1
@@ -273,80 +266,9 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
     return graph
 
 
-def generate_network(availability):
-    # GENERAL INFORMATION
-    num_persons = 5
-    n = len(availability)       # n is the number of days
-    demand = n * 2              # represents the number of meals to be prepared (num of days * 2)
+def bfs(availability, network, source, sink, parent):
+    n = len(availability)
 
-    # REQUIREMENTS
-    min_meals = math.floor(0.36 * n)
-    max_meals = math.ceil(0.44 * n)
-    max_order = math.ceil(0.1 * n)
-
-    # NODE INFORMATION
-    source_node = 0
-    meals_node = 1
-    start_person_nodes = 2
-    order_option_node = 7
-    start_day_nodes = 8
-    start_meal_nodes = start_day_nodes + n
-    num_nodes = 1 + 1 + (num_persons + 1) + (n * 3) + 1
-    # source + meals + (num of people + order option) + (num of days * 3) + sink
-
-    # Generate empty graph
-    graph = [[0 for _ in range(num_nodes)] for _ in range(num_nodes)]
-
-    # Fill graph
-    # Edge from source node to meals node
-    graph[source_node][meals_node] = demand
-
-    # Edge from meals to each person
-    for i in range(num_persons):
-        graph[meals_node][i + start_person_nodes] = max_meals
-
-    # Edge from meals to order option
-    graph[meals_node][order_option_node] = max_order
-
-    # Edge from order option to every meal
-    for meal in range(n * 2):
-        graph[order_option_node][meal + start_meal_nodes] = 1
-
-    # Edge from each person to each day they can prepare a meal
-    # and edge from each day to each meal
-    for day in range(n):
-        for person in range(num_persons):
-            # If the person can prepare breakfast for that day
-            if availability[day][person] == 1:
-                # Add edge from person to the day
-                # Capacity is one since each person can only prepare one meal for each day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. breakfast)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
-
-            # If the person can prepare dinner for that day
-            elif availability[day][person] == 2:
-                # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. dinner)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
-
-            # If the person can prepare breakfast and dinner for that day
-            elif availability[day][person] == 3:
-                # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. breakfast and dinner)
-                # Add edge to both breakfast and dinner for the day
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
-
-    # Edge from each meal to super sink node
-    for i in range(n * 2):
-        graph[i + start_meal_nodes][num_nodes - 1] = 1
-    return graph
-
-
-def bfs(availability, network, source, sink, parent, n):
     # NODE INFORMATION
     start_person_nodes = 2
     start_day_nodes = 8
@@ -406,14 +328,24 @@ def bfs(availability, network, source, sink, parent, n):
     return False
 
 
-def ford_fulkerson(availability, network, source, sink, n):
+def ford_fulkerson(availability, network):
     """
+    Function that implements Ford-Fulkerson algorithm for finding the maximum flow
+    of a network. Contains modifications to record each time a path is augmented
+    into breakfast and dinner arrays. The residual capacity of each augmentation
+    is always 1 since the minimum capacity is found from the person nodes to the
+    day nodes.
 
     :Input:
+        availability:
         network: adjacency matrix representation of a residual network
         source: integer representing the source node in the network
         sink: integer representation representing the sink node in the network
     """
+    n = len(availability)
+    source = 0
+    sink = len(network) - 1
+
     # NODE INFORMATION
     start_person_nodes = 2
     order_option_node = 7
@@ -431,7 +363,7 @@ def ford_fulkerson(availability, network, source, sink, n):
     dinner = [-1] * n
 
     # While there is an augmenting path in the network
-    while bfs(availability, network, source, sink, parent, n):
+    while bfs(availability, network, source, sink, parent):
         # Starting from the sink node and going backwards until source
         curr = sink
         while curr != source:
@@ -480,21 +412,6 @@ def ford_fulkerson(availability, network, source, sink, n):
 
 
 # Testing task 1
-network1 = [[0, 0, 3, 5, 0, 0],
-           [0, 0, 0, 3, 0, 0],
-           [0, 0, 0, 0, 5, 0],
-           [0, 0, 3, 0, 0, 3],
-           [0, 0, 0, 0, 0, 5],
-           [0, 0, 0, 0, 0, 0]]
-
-network2 = [[0, 4, 3, 0, 0, 0, 0],
-            [0, 0, 3, 0, 3, 0, 0],
-            [0, 0, 0, 0, 2, 3, 0],
-            [0, 0, 2, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 2, 2],
-            [0, 0, 0, 2, 0, 0, 5],
-            [0, 0, 0, 0, 0, 0, 0]]
-
 availability1 = [[2, 0, 2, 1, 2],
                  [3, 3, 1, 0, 0],
                  [0, 1, 0, 3, 0],
