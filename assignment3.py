@@ -47,30 +47,34 @@ def generate_network(availability):
     # Edge from meals to order option
     graph[1][7] = max_order
 
-    # Edge from order option to every meal (starting from node 18)
-    for i in range(n * 2):
-        graph[order_option_node][i + start_meal_nodes] = 1
+    # Edge from order option to every day
+    for day in range(n):
+        graph[order_option_node][day + start_day_nodes] = 1
 
     # Edge from each person to each day they can prepare a meal
     # and edge from each day to each meal
     for day in range(n):
         for person in range(num_persons):
-            # Add edge from person to the day
-            # Capacity is one since each person can only prepare one meal for each day
-            graph[person + start_person_nodes][day + start_day_nodes] = 1
-
             # If the person can prepare breakfast for that day
             if availability[day][person] == 1:
+                # Add edge from person to the day
+                # Capacity is one since each person can only prepare one meal for each day
+                graph[person + start_person_nodes][day + start_day_nodes] = 1
                 # Add edge from the day to the corresponding meal of the day (i.e. breakfast)
                 graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
 
             # If the person can prepare dinner for that day
             elif availability[day][person] == 2:
+                # Add edge from person to the day
+                graph[person + start_person_nodes][day + start_day_nodes] = 1
                 # Add edge from the day to the corresponding meal of the day (i.e. dinner)
                 graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
 
             # If the person can prepare breakfast and dinner for that day
             elif availability[day][person] == 3:
+                # Add edge from person to the day
+                graph[person + start_person_nodes][day + start_day_nodes] = 1
+                # Add edge from the day to the corresponding meal of the day (i.e
                 # Add edge to both breakfast and dinner for the day
                 graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
                 graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
@@ -78,7 +82,7 @@ def generate_network(availability):
     # Edge from each meal to super sink node
     for i in range(n * 2):
         graph[i + start_meal_nodes][num_nodes - 1] = 1
-
+    print(graph)
     return graph
 
 
@@ -152,27 +156,16 @@ def ford_fulkerson(network, source, sink, n):
         while curr != source:
             # If curr is a meal node
             if start_meal_nodes <= curr <= len(network) - 2:
-                # If the parent is the order node
-                if parent[curr] == order_option_node:
-                    day = (curr - start_meal_nodes) // 2
-                    # If curr is even, it is a breakfast node
-                    if curr % 2 == 0:
-                        breakfast[day] = 5
-                    # If curr is odd, it is a dinner node
-                    else:
-                        dinner[day] = 5
-                # Otherwise, if the parent is a day node
-                else:
-                    # Record that the person will be preparing the corresponding meal
-                    day = parent[curr] - start_day_nodes
-                    person = parent[parent[curr]] - start_person_nodes
+                # Record that the person will be preparing the corresponding meal
+                day = parent[curr] - start_day_nodes
+                person = parent[parent[curr]] - start_person_nodes
 
-                    # If curr is even, it is a breakfast node
-                    if curr % 2 == 0:
-                        breakfast[day] = person
-                    # If curr is odd, it is a dinner node
-                    else:
-                        dinner[day] = person
+                # If curr is even, it is a breakfast node
+                if curr % 2 == 0:
+                    breakfast[day] = person
+                # If curr is odd, it is a dinner node
+                else:
+                    dinner[day] = person
 
             # Move backwards
             curr = parent[curr]
