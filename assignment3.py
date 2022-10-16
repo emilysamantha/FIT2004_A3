@@ -39,6 +39,13 @@ def allocate(availability):
     :Aux Space Complexity: Needs to be O(n^2), where n is the number of days
 
     :Approach:
+    This function uses the concept of circulation with demands and lower bounds problem. To solve it, the network flow
+    is broken down into two graphs, graph_min_flow and graph_adjusted. graph_min_flow has capacity equal to the
+    lower bound, while graph_adjusted has capacity equal to the remainder of flow available from the main network flow.
+    We use Ford-Fulkerson's algorithm for finding maximum flow to
+
+    A valid allocation exists if all outgoing edges from the source node in both graphs are saturated (i.e. has full
+    capacity). We then merge the findings from these two graphs to construct the breakfast and dinner arrays.
     """
     # GENERAL INFORMATION
     num_persons = 5
@@ -63,25 +70,58 @@ def allocate(availability):
         return None
 
     # Merge breakfast_min_flow and breakfast_adjusted into final breakfast array
-    breakfast = []
-    for i in range(n):
-        if breakfast_min_flow[i] > -1:
-            breakfast.append(breakfast_min_flow[i])
-        elif breakfast_adjusted[i] > -1:
-            breakfast.append(breakfast_adjusted[i])
+    breakfast = merge_results(breakfast_min_flow, breakfast_adjusted)
 
     # Merge dinner_min_flow and dinner_adjusted into final dinner array
-    dinner = []
-    for i in range(n):
-        if dinner_min_flow[i] > -1:
-            dinner.append(dinner_min_flow[i])
-        elif dinner_adjusted[i] > -1:
-            dinner.append(dinner_adjusted[i])
+    dinner = merge_results(dinner_min_flow, dinner_adjusted)
 
     return breakfast, dinner
 
 
 def generate_network_min_flow(availability):
+    """
+    Function that returns a network in adjacency matrix format.
+
+    :Input:
+        availability: list of lists that contains data about the time availability of each person.
+
+    :Output:
+        graph: an adjacency matrix that represents the network flow for calculating the meal allocation,
+               this network flow has capacities equal to the lower bound needed in the allocation
+
+    :Time Complexity: O(n^2)
+    :Aux Space Complexity: O(n^2), where n is the number of days
+
+    Nodes:
+        - Source node
+        - Meals node
+        - 5 person nodes + 1 order option node
+        - n day nodes
+        - (n * 2) meal nodes
+        - Sink node
+
+    Network Visualization:
+    n = 5 days
+
+                 <<Edge for each      <<Edge for every
+                 day that person      meal that can be prepared
+                 is able to prepare   by a person>>
+                 a meal>>
+           |-->P0------------------>D0--------------->M0----|
+           |                           |------------->M1----|
+           |-->P1                   D1                M2----|   <<Edge from every
+           |                                          M3----|   meal to sink node>>
+           |-->P2                   D2                M4----|
+    S-->M--|                                          M5----------->T
+           |-->P3                   D3                M6----|
+           |                                          M7----|
+           |-->P4                   D4                M8----|
+                                                      M9----|
+               P5                   D5                M10---|
+           <<Here, P5 which is the order option node,
+           does not have any edges connected to it
+           because the lower bound for it is 0>>
+    """
     # GENERAL INFORMATION
     num_persons = 5
     n = len(availability)   # n is the number of days
@@ -100,7 +140,7 @@ def generate_network_min_flow(availability):
     # source + meals + (num of people + order option) + (num of days * 3) + sink
 
     # Generate empty graph
-    graph = [[0 for _ in range(num_nodes)] for _ in range(num_nodes)]
+    graph = [[0 for _ in range(num_nodes)] for _ in range(num_nodes)]           # O(n^2)
 
     # Fill graph
     # Edge from source node to meals node
@@ -116,7 +156,7 @@ def generate_network_min_flow(availability):
 
     # Edge from each person to each day they can prepare a meal
     # and edge from each day to each meal
-    for day in range(n):
+    for day in range(n):                        # O(n)
         for person in range(num_persons):
             # If the person can prepare breakfast for that day
             if availability[day][person] == 1:
@@ -143,13 +183,56 @@ def generate_network_min_flow(availability):
                 graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
 
     # Edge from each meal to super sink node
-    for i in range(n * 2):
+    for i in range(n * 2):                      # O(n^2)
         graph[i + start_meal_nodes][num_nodes - 1] = 1
 
     return graph
 
 
 def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow):
+    """
+    Function that returns a network in adjacency matrix format.
+
+    :Input:
+        availability: list of lists that contains data about the time availability of each person.
+
+    :Output:
+        graph: an adjacency matrix that represents the network flow for calculating the meal allocation,
+               this network flow has capacities equal to the remainder flow available after allocation
+               using the min flow network
+
+    :Time Complexity: O(n^2)
+    :Aux Space Complexity: O(n^2), where n is the number of days
+
+    Nodes:
+        - Source node
+        - Meals node
+        - 5 person nodes + 1 order option node
+        - n day nodes
+        - (n * 2) meal nodes
+        - Sink node
+
+    Network Visualization:
+    n = 5 days
+
+                 <<Edge for each      <<Edge for every
+                 day that person      meal that can be prepared
+                 is able to prepare   by a person>>
+                 a meal>>
+           |-->P0------------------>D0--------------->M0----|
+           |                           |------------->M1----|
+           |-->P1                   D1                M2----|   <<Edge from every
+           |                                          M3----|   meal to sink node>>
+           |-->P2                   D2                M4----|
+    S-->M--|                                          M5----------->T
+           |-->P3                   D3                M6----|
+           |                                          M7----|
+           |-->P4                   D4                M8----|
+           |                                          M9----|
+           |-->P5                   D5                M10---|
+           <<Here, we add an edge to P5 which is
+           the order option node, >>
+    """
     # GENERAL INFORMATION
     num_persons = 5
     n = len(availability)  # n is the number of days
@@ -266,8 +349,24 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
     return graph
 
 
-def bfs(availability, network, source, sink, parent):
+def bfs(availability, network, parent):
+    """
+    Function to perform breadth-first-search on a network.
+
+    :Input:
+        availability:
+        network:
+        parent:
+    :Output:
+        Returns True if there exists a simple path from the source node to the sink node.
+        Returns False otherwise.
+
+    :Time Complexity: O(n)
+    :Aux Space Complexity: O(n)
+    """
     n = len(availability)
+    source = 0
+    sink = len(network) - 1
 
     # NODE INFORMATION
     start_person_nodes = 2
@@ -330,17 +429,23 @@ def bfs(availability, network, source, sink, parent):
 
 def ford_fulkerson(availability, network):
     """
-    Function that implements Ford-Fulkerson algorithm for finding the maximum flow
-    of a network. Contains modifications to record each time a path is augmented
-    into breakfast and dinner arrays. The residual capacity of each augmentation
-    is always 1 since the minimum capacity is found from the person nodes to the
-    day nodes.
+    Function that implements Ford-Fulkerson algorithm for finding the maximum flow of a network.
+    Contains modifications to record each time a path is augmented and stores the corresponding person
+    inside breakfast and dinner arrays. The residual capacity of each augmentation is always 1
+    since the minimum capacity is found from the person nodes to the day nodes (Flow can only either be
+    0 or 1, i.e. available or not available).
 
     :Input:
-        availability:
+        availability: list of lists that contains data about the time availability of each person.
         network: adjacency matrix representation of a residual network
-        source: integer representing the source node in the network
-        sink: integer representation representing the sink node in the network
+    :Output:
+        (breakfast, dinner, max_flow), where
+        breakfast: array containing the person responsible to prepare each breakfast over n days
+        dinner: array containing the person responsible to prepare each dinner over n days
+        max_flow: the maximum flow found by the algorithm
+
+    :Time Complexity:
+    :Aux Space Complexity:
     """
     n = len(availability)
     source = 0
@@ -363,7 +468,7 @@ def ford_fulkerson(availability, network):
     dinner = [-1] * n
 
     # While there is an augmenting path in the network
-    while bfs(availability, network, source, sink, parent):
+    while bfs(availability, network, parent):
         # Starting from the sink node and going backwards until source
         curr = sink
         while curr != source:
@@ -411,17 +516,43 @@ def ford_fulkerson(availability, network):
     return breakfast, dinner, max_flow
 
 
+def merge_results(min_flow_results, adjusted_results):
+    """
+    Function to merge the results of maximizing the flow of network with min flow and
+    maximizing the flow of network with adjusted capacities.
+
+    :Input:
+        min_flow_results: list of length n which stores the person responsible for preparing a meal
+        adjusted_results: list of length n which stores the person responsible for preparing a meal
+    :Output:
+
+    :Time Complexity: O(n)
+    :Aux Space Complexity: O(n)
+    """
+    res = []
+
+    # Iterating through each value in the results
+    for i in range(len(min_flow_results)):
+        # If the value is filled (i.e. not the default value -1)
+        # Append the value to results
+        if min_flow_results[i] > -1:
+            res.append(min_flow_results[i])
+        elif adjusted_results[i] > -1:
+            res.append(adjusted_results[i])
+
+    return res
+
+
 # Testing task 1
 availability1 = [[2, 0, 2, 1, 2],
                  [3, 3, 1, 0, 0],
                  [0, 1, 0, 3, 0],
                  [0, 0, 2, 0, 3],
                  [1, 0, 0, 2, 1],
-                 [0, 0, 3, 0, 2],
-                 [0, 2, 0, 1, 0],
+                 [3, 3, 3, 3, 3],
+                 [3, 3, 3, 3, 3],
                  [1, 3, 3, 2, 0],
-                 [0, 0, 1, 2, 1],
-                 [2, 0, 0, 3, 0]]
+                 [2, 2, 3, 2, 3]]
 
 print(allocate(availability1))
 
@@ -429,8 +560,7 @@ print(allocate(availability1))
 # Task 2 - Similarity Detector
 def compare_subs(submission1, submission2):
     """
-    Function that uses a retrieval data structure to compare two submissions ang
-    determine their similarity.
+    Function that uses a retrieval data structure to compare two submissions and determine their similarity.
 
     :Input:
         submission1: first string to compare containing characters in the range [a-z] or space
