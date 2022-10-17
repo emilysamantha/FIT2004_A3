@@ -554,7 +554,7 @@ availability1 = [[2, 0, 2, 1, 2],
                  [1, 3, 3, 2, 0],
                  [2, 2, 3, 2, 3]]
 
-print(allocate(availability1))
+# print(allocate(availability1))
 
 
 # Task 2 - Similarity Detector
@@ -579,4 +579,76 @@ def compare_subs(submission1, submission2):
 
     :Approach:
     """
-    pass
+    # Concatenating second string to first string
+    string = submission1 + '#' + submission2 + '$'
+
+
+class SuffixTree:
+    def __init__(self, string):
+        self.string = string
+        self.children = []
+
+    def addSuffix(self, startNode, startIndex, length, isPartOfString1, isPartOfString2):
+        matching_letter_found = False
+
+        # Iterate through the nodes connected to the starting node
+        for node in startNode.children:
+            # If the first character in the suffix to add matches the start index of the connected node
+            if self.string[startIndex] == self.string[node.startIndex]:
+                # If exists, make the remainder of the length into the matched node's child
+                if node.length > 1:
+                    self.addSuffix(node, node.startIndex + 1, node.length - 1, node.isPartOfString1,
+                                   node.isPartOfString2)
+                    # And un-mark the node as an end
+                    node.isEnd = False
+                # Make the matched node into a node of length 1
+                node.length = 1
+                # Update isPartOfString1 and isPartOfString2
+                if isPartOfString1:
+                    node.isPartOfString1 = True
+                if isPartOfString2:
+                    node.isPartOfString2 = True
+                # If the suffix to add is only one letter, then just mark the matched node as an end
+                if length == 1:
+                    node.isEnd = True
+                # Else, make the remainder of the suffix to add a child of the matched node
+                else:
+                    self.addSuffix(node, startIndex + 1, length - 1, isPartOfString1, isPartOfString2)
+
+                # Mark matched_letter_found as True and break out of the for loop
+                matching_letter_found = True
+                break
+
+        # Else if we have iterated through all the startNode's children and did not find a matching letter
+        if not matching_letter_found:
+            # Append a new child to the startNode
+            startNode.children.append(SuffixTreeNode(startIndex, length, True, isPartOfString1, isPartOfString2))
+
+
+class SuffixTreeNode:
+    def __init__(self, startIndex, length, isEnd, isPartOfString1, isPartOfString2):
+        self.startIndex = startIndex
+        self.length = length
+        self.children = []
+        self.isEnd = isEnd
+        self.isPartOfString1 = isPartOfString1
+        self.isPartOfString2 = isPartOfString2
+
+    def __str__(self):
+        return "Start Index: " + str(self.startIndex) + ", length: " + str(self.length) + ", isEnd: " + \
+               str(self.isEnd) + ", string1: " + str(self.isPartOfString1) + ", string2: " + str(self.isPartOfString2)
+
+
+# TESTING TASK 2
+string = "referee"
+suffix_tree = SuffixTree(string)
+for startIndex in range(len(string)):
+    suffix_tree.addSuffix(suffix_tree, startIndex, len(string) - startIndex, True, False)
+
+for i in range(len(suffix_tree.children)):
+    print(suffix_tree.children[i])
+
+print()
+
+for i in range(len(suffix_tree.children[0].children)):
+    print(suffix_tree.children[0].children[i])
