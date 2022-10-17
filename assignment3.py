@@ -301,6 +301,8 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
                 graph[person + start_person_nodes][day + start_day_nodes] = 1
                 # Add edge from the day to the corresponding meal of the day (i.e. breakfast)
                 graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
+                # Edge from the meal to super sink node
+                graph[(day * 2) + start_meal_nodes][num_nodes - 1] = 1
 
             # If the person can prepare dinner for that day and dinner for that day is not allocated yet
             elif availability[day][person] == 2 and dinner_min_flow[day] == -1:
@@ -584,20 +586,29 @@ def compare_subs(submission1, submission2):
 
 
 class SuffixTree:
-    def __init__(self, string):
-        self.string = string
+    def __init__(self, string1, string2):
+        self.string1 = string1
+        self.string2 = string2
         self.children = []
 
-    def addSuffix(self, startNode, startIndex, length, isPartOfString1, isPartOfString2):
+    def addSuffix(self, startNode, startIndex, length, isString1, isPartOfString1, isPartOfString2):
         matching_letter_found = False
+        if isString1:
+            string = self.string1
+        else:
+            string = self.string2
 
         # Iterate through the nodes connected to the starting node
         for node in startNode.children:
+            if node.isPartOfString1:
+                string_node = self.string1
+            else:
+                string_node = self.string2
             # If the first character in the suffix to add matches the start index of the connected node
-            if self.string[startIndex] == self.string[node.startIndex]:
+            if string[startIndex] == string_node[node.startIndex]:
                 # If exists, make the remainder of the length into the matched node's child
                 if node.length > 1:
-                    self.addSuffix(node, node.startIndex + 1, node.length - 1, node.isPartOfString1,
+                    self.addSuffix(node, node.startIndex + 1, node.length - 1, isString1, node.isPartOfString1,
                                    node.isPartOfString2)
                     # And un-mark the node as an end
                     node.isEnd = False
@@ -613,7 +624,7 @@ class SuffixTree:
                     node.isEnd = True
                 # Else, make the remainder of the suffix to add a child of the matched node
                 else:
-                    self.addSuffix(node, startIndex + 1, length - 1, isPartOfString1, isPartOfString2)
+                    self.addSuffix(node, startIndex + 1, length - 1, isString1, isPartOfString1, isPartOfString2)
 
                 # Mark matched_letter_found as True and break out of the for loop
                 matching_letter_found = True
@@ -640,10 +651,14 @@ class SuffixTreeNode:
 
 
 # TESTING TASK 2
-string = "referee"
-suffix_tree = SuffixTree(string)
-for startIndex in range(len(string)):
-    suffix_tree.addSuffix(suffix_tree, startIndex, len(string) - startIndex, True, False)
+string1 = "referrer"
+string2 = "referee"
+suffix_tree = SuffixTree(string1, string2)
+for startIndex in range(len(string1)):
+    suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
+
+for startIndex in range(len(string2)):
+    suffix_tree.addSuffix(suffix_tree, startIndex, len(string2) - startIndex, False, False, True)
 
 for i in range(len(suffix_tree.children)):
     print(suffix_tree.children[i])
