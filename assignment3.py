@@ -557,7 +557,7 @@ availability1 = [[2, 0, 2, 1, 2],
                  [0, 0, 1, 2, 1],
                  [2, 0, 0, 3, 0]]
 
-print(allocate(availability1))
+# print(allocate(availability1))
 
 
 # Task 2 - Similarity Detector
