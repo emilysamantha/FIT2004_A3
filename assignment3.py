@@ -602,7 +602,17 @@ def compare_subs(submission1, submission2):
 
 
 class SuffixTree:
+    """
+    Class that represents a suffix tree.
+    """
     def __init__(self, string1, string2):
+        """
+        Constructor for SuffixTree class.
+
+        :Input:
+            string1: First string to add to the suffix tree
+            string2: Second string to add to the suffix tree
+        """
         self.string1 = string1
         self.string2 = string2
         self.children = []
@@ -610,6 +620,22 @@ class SuffixTree:
         self.maxLength = 0
 
     def addSuffix(self, startNode, startIndex, length, isString1, isPartOfString1, isPartOfString2):
+        """
+        Method to add a suffix into the suffix tree.
+
+        :Input:
+            startNode: suffix tree node we are adding the suffix to
+            startIndex: starting index of the suffix to add
+            length: length of the suffix to add
+            isString1: boolean that represents whether the suffix is from string1
+            isPartOfString1: boolean that represents whether the suffix is part of string1
+            isPartOfString2: boolean that represents whether the suffix is part of string2
+
+        :Post-condition: the suffix is added into the structure of the suffix tree
+
+        Approach:
+        TODO: Complete add_suffix approach
+        """
         matching_letter_found = False
         if isString1:
             string = self.string1
@@ -622,6 +648,7 @@ class SuffixTree:
                 string_node = self.string1
             else:
                 string_node = self.string2
+            # TODO: modify here so that it skips over if the letters are the same, don't break down immediately
             # If the first character in the suffix to add matches the start index of the connected node
             if string[startIndex] == string_node[node.startIndex]:
                 # If exists, make the remainder of the length into the matched node's child
@@ -661,6 +688,12 @@ class SuffixTree:
             startNode.children.append(SuffixTreeNode(startIndex, length, True, isPartOfString1, isPartOfString2))
 
     def build(self):
+        """
+        Method to build (i.e. fill up) the suffix tree
+
+        :Time Complexity: TODO: Complete time complexity build method
+        :Aux Space Complexity: TODO: Complete space complexity build method
+        """
         # Inserting suffixes of submission1 into the suffix tree
         for startIndex in range(len(self.string1)):
             self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, True, False)
@@ -671,7 +704,20 @@ class SuffixTree:
 
 
 class SuffixTreeNode:
+    """
+    Class that represents a suffix tree node.
+    """
     def __init__(self, startIndex, length, isEnd, isPartOfString1, isPartOfString2):
+        """
+        Constructor for SuffixTreeNode class.
+
+        :Input:
+            startIndex: starting index of the substring in the node
+            length: length of the substring in the node
+            isEnd: boolean that indicates whether the node is
+            isPartOfString1:
+            isPartOfString2:
+        """
         self.startIndex = startIndex
         self.length = length
         self.children = []
@@ -736,7 +782,7 @@ def build_longest_common_substring(max_node, submission1):
 # string2 = "referee"
 
 string1 = "the quick brown fox jumped over the lazy dog"
-string2 = "my lazy dog has eaten my homework"
+string2 = "the lazy dog"
 
 # string1 = "radix sort and counting sort are both non comparison sorting algorithms"
 # string2 = "counting sort and radix sort are both non comparison sorting algorithms"
