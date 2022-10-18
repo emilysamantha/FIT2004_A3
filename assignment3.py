@@ -356,9 +356,9 @@ def bfs(availability, network, parent):
     Function to perform breadth-first-search on a network.
 
     :Input:
-        availability:
-        network:
-        parent:
+        availability: list of lists that contains data about the time availability of each person.
+        network: adjacency matrix representation of network to apply BFS to
+        parent: list that stores the immediate parent of a node in the BFS path
     :Output:
         Returns True if there exists a simple path from the source node to the sink node.
         Returns False otherwise.
