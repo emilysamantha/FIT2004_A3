@@ -582,13 +582,37 @@ def compare_subs(submission1, submission2):
 
     :Approach:
     """
+    # Creating empty suffix tree
     suffix_tree = SuffixTree(submission1, submission2)
 
+    # Inserting suffixes of submission1 into the suffix tree
     for startIndex in range(len(submission1)):
         suffix_tree.addSuffix(suffix_tree, startIndex, len(submission1) - startIndex, True, True, False)
 
+    # Inserting suffixes of submission2 into the suffix tree
     for startIndex in range(len(submission2)):
         suffix_tree.addSuffix(suffix_tree, startIndex, len(submission2) - startIndex, False, False, True)
+
+    # Traversing the suffix tree to find the node with largest commonLength
+    max_node = findMaxNode(suffix_tree)
+
+    # Building the longest common substring
+    longest_common_substring = []
+    curr_node = max_node
+
+    while curr_node.commonLength != 0:
+        longest_common_substring.append(submission1[curr_node.startIndex:curr_node.startIndex + curr_node.length])
+        curr_node = curr_node.parent
+
+    print(longest_common_substring)
+
+    longest_common_substring = "".join(longest_common_substring[::-1])
+
+    # Calculating similarity_score1 and similarity_score2
+    similarity_score1 = round(suffix_tree.maxLength / len(submission1) * 100)
+    similarity_score2 = round(suffix_tree.maxLength / len(submission2) * 100)
+
+    return [longest_common_substring, similarity_score1, similarity_score2]
 
 
 class SuffixTree:
@@ -596,6 +620,8 @@ class SuffixTree:
         self.string1 = string1
         self.string2 = string2
         self.children = []
+        self.commonLength = 0
+        self.maxLength = 0
 
     def addSuffix(self, startNode, startIndex, length, isString1, isPartOfString1, isPartOfString2):
         matching_letter_found = False
@@ -620,11 +646,18 @@ class SuffixTree:
                     node.isEnd = False
                 # Make the matched node into a node of length 1
                 node.length = 1
-                # Update isPartOfString1 and isPartOfString2
+                # Update isPartOfString1 and isPartOfString2 of the matched node
                 if isPartOfString1:
                     node.isPartOfString1 = True
                 if isPartOfString2:
                     node.isPartOfString2 = True
+                # If the matched node is part of both string1 and string2
+                # Update the common length
+                if node.isPartOfString1 and node.isPartOfString2:
+                    node.commonLength = startNode.commonLength + 1
+                    # If the node's commonLength is greater than the current maxLength of the tree
+                    if node.commonLength > self.maxLength:
+                        self.maxLength = node.commonLength
                 # If the suffix to add is only one letter, then just mark the matched node as an end
                 if length == 1:
                     node.isEnd = True
@@ -650,26 +683,68 @@ class SuffixTreeNode:
         self.isEnd = isEnd
         self.isPartOfString1 = isPartOfString1
         self.isPartOfString2 = isPartOfString2
+        self.commonLength = 0
+        self.parent = None
 
     def __str__(self):
         return "Start Index: " + str(self.startIndex) + ", length: " + str(self.length) + ", isEnd: " + \
-               str(self.isEnd) + ", string1: " + str(self.isPartOfString1) + ", string2: " + str(self.isPartOfString2)
+               str(self.isEnd) + ", string1: " + str(self.isPartOfString1) + ", string2: " + str(self.isPartOfString2) \
+               + ", commonLength: " + str(self.commonLength)
+
+
+def findMaxNode(suffixTree):
+    # Stack to keep track of which nodes to visit first
+    # Visit the root first
+    stack = [suffixTree]
+
+    # Depth First Search
+    while stack:
+        # Pop the node to visit
+        curr = stack.pop()
+
+        # Initialize common_letter_found
+        common_letter_found = False
+
+        # Looping through curr's children
+        for node in curr.children:
+            # If the node is part of both string1 and string2
+            # It means we should visit it
+            if node.isPartOfString1 and node.isPartOfString2:
+                # Append to the stack
+                stack.append(node)
+                # Mark curr as parent of the node
+                node.parent = curr
+                # Mark common_letter_found to True
+                common_letter_found = True
+
+        # If we have iterated through all the current node's children and did not find another common letter
+        # It means we have reached the end of the common substring
+        if not common_letter_found:
+            # Check if it is the maxLength substring
+            if curr.commonLength == suffixTree.maxLength:
+                return curr
 
 
 # TESTING TASK 2
-# string1 = "referrer"
-# string2 = "referee"
+# string1 = "the quick brown fox jumped over the lazy dog"
+# string2 = "my lazy dog has eaten my homework"
+
+string1 = "radix sort and counting sort are both non comparison sorting algorithms"
+string2 = "counting sort and radix sort are both non comparison sorting algorithms"
+
+print(compare_subs(string1, string2))
+
 # suffix_tree = SuffixTree(string1, string2)
 # for startIndex in range(len(string1)):
 #     suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
 #
 # for startIndex in range(len(string2)):
 #     suffix_tree.addSuffix(suffix_tree, startIndex, len(string2) - startIndex, False, False, True)
-#
+
 # for i in range(len(suffix_tree.children)):
 #     print(suffix_tree.children[i])
 #
 # print()
 #
-# for i in range(len(suffix_tree.children[0].children)):
-#     print(suffix_tree.children[0].children[i])
+# for i in range(len(suffix_tree.children[0].children[0].children)):
+#     print(suffix_tree.children[0].children[0].children[i])
