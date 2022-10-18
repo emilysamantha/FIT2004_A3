@@ -551,12 +551,13 @@ availability1 = [[2, 0, 2, 1, 2],
                  [0, 1, 0, 3, 0],
                  [0, 0, 2, 0, 3],
                  [1, 0, 0, 2, 1],
-                 [3, 3, 3, 3, 3],
-                 [3, 3, 3, 3, 3],
+                 [0, 0, 3, 0, 2],
+                 [0, 2, 0, 1, 0],
                  [1, 3, 3, 2, 0],
-                 [2, 2, 3, 2, 3]]
+                 [0, 0, 1, 2, 1],
+                 [2, 0, 0, 3, 0]]
 
-# print(allocate(availability1))
+print(allocate(availability1))
 
 
 # Task 2 - Similarity Detector
@@ -581,8 +582,13 @@ def compare_subs(submission1, submission2):
 
     :Approach:
     """
-    # Concatenating second string to first string
-    string = submission1 + '#' + submission2 + '$'
+    suffix_tree = SuffixTree(submission1, submission2)
+
+    for startIndex in range(len(submission1)):
+        suffix_tree.addSuffix(suffix_tree, startIndex, len(submission1) - startIndex, True, True, False)
+
+    for startIndex in range(len(submission2)):
+        suffix_tree.addSuffix(suffix_tree, startIndex, len(submission2) - startIndex, False, False, True)
 
 
 class SuffixTree:
@@ -651,19 +657,19 @@ class SuffixTreeNode:
 
 
 # TESTING TASK 2
-string1 = "referrer"
-string2 = "referee"
-suffix_tree = SuffixTree(string1, string2)
-for startIndex in range(len(string1)):
-    suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
-
-for startIndex in range(len(string2)):
-    suffix_tree.addSuffix(suffix_tree, startIndex, len(string2) - startIndex, False, False, True)
-
-for i in range(len(suffix_tree.children)):
-    print(suffix_tree.children[i])
-
-print()
-
-for i in range(len(suffix_tree.children[0].children)):
-    print(suffix_tree.children[0].children[i])
+# string1 = "referrer"
+# string2 = "referee"
+# suffix_tree = SuffixTree(string1, string2)
+# for startIndex in range(len(string1)):
+#     suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
+#
+# for startIndex in range(len(string2)):
+#     suffix_tree.addSuffix(suffix_tree, startIndex, len(string2) - startIndex, False, False, True)
+#
+# for i in range(len(suffix_tree.children)):
+#     print(suffix_tree.children[i])
+#
+# print()
+#
+# for i in range(len(suffix_tree.children[0].children)):
+#     print(suffix_tree.children[0].children[i])
