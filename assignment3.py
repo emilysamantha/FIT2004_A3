@@ -585,28 +585,14 @@ def compare_subs(submission1, submission2):
     # Creating empty suffix tree
     suffix_tree = SuffixTree(submission1, submission2)
 
-    # Inserting suffixes of submission1 into the suffix tree
-    for startIndex in range(len(submission1)):
-        suffix_tree.addSuffix(suffix_tree, startIndex, len(submission1) - startIndex, True, True, False)
-
-    # Inserting suffixes of submission2 into the suffix tree
-    for startIndex in range(len(submission2)):
-        suffix_tree.addSuffix(suffix_tree, startIndex, len(submission2) - startIndex, False, False, True)
+    # Build the suffix tree
+    suffix_tree.build()
 
     # Traversing the suffix tree to find the node with largest commonLength
     max_node = findMaxNode(suffix_tree)
 
     # Building the longest common substring
-    longest_common_substring = []
-    curr_node = max_node
-
-    while curr_node.commonLength != 0:
-        longest_common_substring.append(submission1[curr_node.startIndex:curr_node.startIndex + curr_node.length])
-        curr_node = curr_node.parent
-
-    print(longest_common_substring)
-
-    longest_common_substring = "".join(longest_common_substring[::-1])
+    longest_common_substring = build_longest_common_substring(max_node, submission1)
 
     # Calculating similarity_score1 and similarity_score2
     similarity_score1 = round(suffix_tree.maxLength / len(submission1) * 100)
@@ -674,6 +660,15 @@ class SuffixTree:
             # Append a new child to the startNode
             startNode.children.append(SuffixTreeNode(startIndex, length, True, isPartOfString1, isPartOfString2))
 
+    def build(self):
+        # Inserting suffixes of submission1 into the suffix tree
+        for startIndex in range(len(self.string1)):
+            self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, True, False)
+
+        # Inserting suffixes of submission2 into the suffix tree
+        for startIndex in range(len(self.string2)):
+            self.addSuffix(self, startIndex, len(self.string2) - startIndex, False, False, True)
+
 
 class SuffixTreeNode:
     def __init__(self, startIndex, length, isEnd, isPartOfString1, isPartOfString2):
@@ -722,15 +717,29 @@ def findMaxNode(suffixTree):
         if not common_letter_found:
             # Check if it is the maxLength substring
             if curr.commonLength == suffixTree.maxLength:
+                # If yes, we have found the node with max commonLength, and return it
                 return curr
 
 
-# TESTING TASK 2
-# string1 = "the quick brown fox jumped over the lazy dog"
-# string2 = "my lazy dog has eaten my homework"
+def build_longest_common_substring(max_node, submission1):
+    longest_common_substring = []
+    curr_node = max_node
+    while curr_node.commonLength != 0:
+        longest_common_substring.append(submission1[curr_node.startIndex:curr_node.startIndex + curr_node.length])
+        curr_node = curr_node.parent
+    longest_common_substring = "".join(longest_common_substring[::-1])
+    return longest_common_substring
 
-string1 = "radix sort and counting sort are both non comparison sorting algorithms"
-string2 = "counting sort and radix sort are both non comparison sorting algorithms"
+
+# TESTING TASK 2
+# string1 = "referrer"
+# string2 = "referee"
+
+string1 = "the quick brown fox jumped over the lazy dog"
+string2 = "my lazy dog has eaten my homework"
+
+# string1 = "radix sort and counting sort are both non comparison sorting algorithms"
+# string2 = "counting sort and radix sort are both non comparison sorting algorithms"
 
 print(compare_subs(string1, string2))
 
