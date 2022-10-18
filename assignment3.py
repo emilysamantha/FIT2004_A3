@@ -272,12 +272,12 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
     # Only make an edge if that meal is not allocated a person yet
     for meal in range(n * 2):
         day = meal // 2
-        # If meal is even, it is a breakfast node
-        if meal % 2 == 0:
+        # If meal is equal to modulo 2 of n, it is a breakfast node
+        if meal % 2 == (n % 2):
             # If the breakfast for that day has been allocated, do not add an edge
             if breakfast_min_flow[day] != -1:
                 continue
-        # If meal is odd, it is a dinner node
+        # Else if meal is not equal to modulo 2 of n, it is a dinner node
         else:
             # If the dinner for that day has been allocated, do not add an edge
             if dinner_min_flow[day] != -1:
@@ -408,8 +408,8 @@ def bfs(availability, network, parent):
                     if parent[curr] != 7:
                         # If curr is a breakfast node and the person can only prepare dinner or
                         # if curr is a dinner node and the person can only prepare breakfast
-                        if (curr % 2 == 0 and (availability[day][person] == 2)) or \
-                                (curr % 2 == 1 and (availability[day][person] == 1)):
+                        if (curr % 2 == (n % 2) and (availability[day][person] == 2)) or \
+                                (curr % 2 != (n % 2) and (availability[day][person] == 1)):
                             # Ignore the path
                             continue
 
@@ -479,10 +479,10 @@ def ford_fulkerson(availability, network):
                 # If the parent of the meal is the order option node
                 if parent[curr] == order_option_node:
                     day = (curr - start_meal_nodes) // 2
-                    # If curr is even, it is a breakfast node
-                    if curr % 2 == 0:
+                    # If curr is equal to modulo 2 of n, it is a breakfast node
+                    if curr % 2 == (n % 2):
                         breakfast[day] = 5
-                    # If curr is odd, it is a dinner node
+                    # If curr is not equal to modulo 2 of n, it is a dinner node
                     else:
                         dinner[day] = 5
                 else:
@@ -490,10 +490,10 @@ def ford_fulkerson(availability, network):
                     day = parent[curr] - start_day_nodes
                     person = parent[parent[curr]] - start_person_nodes
 
-                    # If curr is even, it is a breakfast node
-                    if curr % 2 == 0:
+                    # If curr is equal to modulo 2 of n, it is a breakfast node
+                    if curr % 2 == (n % 2):
                         breakfast[day] = person
-                    # If curr is odd, it is a dinner node
+                    # If curr is not equal to modulo 2 of n, it is a dinner node
                     else:
                         dinner[day] = person
 
