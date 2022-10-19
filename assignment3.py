@@ -648,17 +648,31 @@ class SuffixTree:
                 string_node = self.string1
             else:
                 string_node = self.string2
+
             # TODO: modify here so that it skips over if the letters are the same, don't break down immediately
-            # If the first character in the suffix to add matches the start index of the connected node
-            if string[startIndex] == string_node[node.startIndex]:
+            # While the character in the suffix to add matches the index of the connected node
+            suffix_index = startIndex
+            node_index = node.startIndex
+            matched_length = 0
+            while suffix_index < startIndex + length and node_index < node.startIndex + node.length and \
+                    string[suffix_index] == string_node[node_index]:
+                # Increment the index to check
+                suffix_index += 1
+                node_index += 1
+                # Increment matched_length
+                matched_length += 1
+                # Mark matched_letter_found as True
+                matching_letter_found = True
+
+            if matching_letter_found:
                 # If exists, make the remainder of the length into the matched node's child
-                if node.length > 1:
-                    self.addSuffix(node, node.startIndex + 1, node.length - 1, isString1, node.isPartOfString1,
-                                   node.isPartOfString2)
+                if node.length - matched_length > 0:
+                    self.addSuffix(node, node.startIndex + matched_length, node.length - matched_length, isString1,
+                                   node.isPartOfString1, node.isPartOfString2)
                     # And un-mark the node as an end
                     node.isEnd = False
-                # Make the matched node into a node of length 1
-                node.length = 1
+                # Adjust the matched node's length
+                node.length = matched_length
                 # Update isPartOfString1 and isPartOfString2 of the matched node
                 if isPartOfString1:
                     node.isPartOfString1 = True
@@ -667,19 +681,18 @@ class SuffixTree:
                 # If the matched node is part of both string1 and string2
                 # Update the common length
                 if node.isPartOfString1 and node.isPartOfString2:
-                    node.commonLength = startNode.commonLength + 1
+                    node.commonLength = startNode.commonLength + matched_length
                     # If the node's commonLength is greater than the current maxLength of the tree
                     if node.commonLength > self.maxLength:
                         self.maxLength = node.commonLength
-                # If the suffix to add is only one letter, then just mark the matched node as an end
-                if length == 1:
+                # If the suffix to add fully matches the matched substring, mark the matched node as an end
+                if length - matched_length == 0:
                     node.isEnd = True
-                # Else, make the remainder of the suffix to add a child of the matched node
+                # Else, make the remainder of the suffix a child of the matched node
                 else:
-                    self.addSuffix(node, startIndex + 1, length - 1, isString1, isPartOfString1, isPartOfString2)
+                    self.addSuffix(node, startIndex + matched_length, length - matched_length, isString1,
+                                   isPartOfString1, isPartOfString2)
 
-                # Mark matched_letter_found as True and break out of the for loop
-                matching_letter_found = True
                 break
 
         # Else if we have iterated through all the startNode's children and did not find a matching letter
@@ -781,8 +794,8 @@ def build_longest_common_substring(max_node, submission1):
 # string1 = "referrer"
 # string2 = "referee"
 
-string1 = "the quick brown fox jumped over the lazy dog"
-string2 = "the lazy dog"
+# string1 = "the quick brown fox jumped over the lazy dog"
+# string2 = "my lazy dog has eaten my homework"
 
 # string1 = "radix sort and counting sort are both non comparison sorting algorithms"
 # string2 = "counting sort and radix sort are both non comparison sorting algorithms"
@@ -798,8 +811,10 @@ print(compare_subs(string1, string2))
 
 # for i in range(len(suffix_tree.children)):
 #     print(suffix_tree.children[i])
-#
+
 # print()
-#
-# for i in range(len(suffix_tree.children[0].children[0].children)):
-#     print(suffix_tree.children[0].children[0].children[i])
+
+# for i in range(len(suffix_tree.children[11].children)):
+#     print(suffix_tree.children[11].children[i])
+
+# print(suffix_tree.maxLength)
