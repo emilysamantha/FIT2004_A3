@@ -667,7 +667,7 @@ class SuffixTree:
             if matching_letter_found:
                 # If exists, make the remainder of the length into the matched node's child
                 if node.length - matched_length > 0:
-                    self.addSuffix(node, node.startIndex + matched_length, node.length - matched_length, isString1,
+                    self.addSuffix(node, node.startIndex + matched_length, node.length - matched_length, node.isPartOfString1,
                                    node.isPartOfString1, node.isPartOfString2)
                     # And un-mark the node as an end
                     node.isEnd = False
@@ -701,19 +701,19 @@ class SuffixTree:
             startNode.children.append(SuffixTreeNode(startIndex, length, True, isPartOfString1, isPartOfString2))
 
     def build(self):
-        """
-        Method to build (i.e. fill up) the suffix tree
+            """
+            Method to build (i.e. fill up) the suffix tree
 
-        :Time Complexity: TODO: Complete time complexity build method
-        :Aux Space Complexity: TODO: Complete space complexity build method
-        """
-        # Inserting suffixes of submission1 into the suffix tree
-        for startIndex in range(len(self.string1)):
-            self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, True, False)
+            :Time Complexity: TODO: Complete time complexity build method
+            :Aux Space Complexity: TODO: Complete space complexity build method
+            """
+            # Inserting suffixes of submission1 into the suffix tree
+            for startIndex in range(len(self.string1)):
+                self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, True, False)
 
-        # Inserting suffixes of submission2 into the suffix tree
-        for startIndex in range(len(self.string2)):
-            self.addSuffix(self, startIndex, len(self.string2) - startIndex, False, False, True)
+            # Inserting suffixes of submission2 into the suffix tree
+            for startIndex in range(len(self.string2)):
+                self.addSuffix(self, startIndex, len(self.string2) - startIndex, False, False, True)
 
 
 class SuffixTreeNode:
@@ -794,27 +794,27 @@ def build_longest_common_substring(max_node, submission1):
 # string1 = "referrer"
 # string2 = "referee"
 
-# string1 = "the quick brown fox jumped over the lazy dog"
-# string2 = "my lazy dog has eaten my homework"
+# string1 = "the lazy brown dog jumped over the lazy dog"
+# string2 = "my lazy dog has eaten my dog"
 
-# string1 = "radix sort and counting sort are both non comparison sorting algorithms"
-# string2 = "counting sort and radix sort are both non comparison sorting algorithms"
+string1 = "radix sort n counting sort ar sorting algos"
+string2 = "counting sort n radix sort ar sorting algos"
 
-print(compare_subs(string1, string2))
+# print(compare_subs(string1, string2))
 
-# suffix_tree = SuffixTree(string1, string2)
-# for startIndex in range(len(string1)):
-#     suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
-#
+suffix_tree = SuffixTree(string1, string2)
+for startIndex in range(len(string1)):
+    suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
+
 # for startIndex in range(len(string2)):
 #     suffix_tree.addSuffix(suffix_tree, startIndex, len(string2) - startIndex, False, False, True)
 
-# for i in range(len(suffix_tree.children)):
-#     print(suffix_tree.children[i])
+for i in range(len(suffix_tree.children)):
+    print(suffix_tree.children[i])
 
-# print()
+print()
 
-# for i in range(len(suffix_tree.children[11].children)):
-#     print(suffix_tree.children[11].children[i])
+for i in range(len(suffix_tree.children[6].children)):
+    print(suffix_tree.children[6].children[i])
 
 # print(suffix_tree.maxLength)
