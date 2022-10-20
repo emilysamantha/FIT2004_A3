@@ -140,15 +140,15 @@ def generate_network_min_flow(availability):
     # source + meals + (num of people + order option) + (num of days * 3) + sink
 
     # Generate empty graph
-    graph = [[0 for _ in range(num_nodes)] for _ in range(num_nodes)]           # O(n^2)
+    graph = [[] for _ in range(num_nodes)]           # O(n^2)
 
     # Fill graph
     # Edge from source node to meals node
-    graph[source_node][meals_node] = demand
+    graph[source_node].append([meals_node, demand])
 
     # Edge from meals to each person (with capacity equal to the lower bound)
     for i in range(num_persons):
-        graph[meals_node][i + start_person_nodes] = min_meals
+        graph[meals_node].append([i + start_person_nodes, min_meals])
 
     # No edge from meals to order option (Not required)
 
@@ -158,33 +158,20 @@ def generate_network_min_flow(availability):
     # and edge from each day to each meal
     for day in range(n):                        # O(n)
         for person in range(num_persons):
-            # If the person can prepare breakfast for that day
-            if availability[day][person] == 1:
+            # If the person can prepare a meal for that day
+            if availability[day][person] > 0:
                 # Add edge from person to the day
                 # Capacity is one since each person can only prepare one meal for each day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. breakfast)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
+                graph[person + start_person_nodes].append([day + start_day_nodes, 1])
 
-            # If the person can prepare dinner for that day
-            elif availability[day][person] == 2:
-                # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. dinner)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
-
-            # If the person can prepare breakfast and dinner for that day
-            elif availability[day][person] == 3:
-                # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e
-                # Add edge to both breakfast and dinner for the day
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
+    # Edge from every day to its breakfast and dinner nodes
+    for day in range(n):
+        graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes, 1])
+        graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes + 1, 1])
 
     # Edge from each meal to super sink node
     for i in range(n * 2):                      # O(n^2)
-        graph[i + start_meal_nodes][num_nodes - 1] = 1
+        graph[i + start_meal_nodes].append([num_nodes - 1, 1])
 
     return graph
 
@@ -254,18 +241,18 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
     # source + meals + (num of people + order option) + (num of days * 3) + sink
 
     # Generate empty graph
-    graph = [[0 for _ in range(num_nodes)] for _ in range(num_nodes)]
+    graph = [[] for _ in range(num_nodes)]              # O(n^2)
 
     # Fill graph
     # Edge from source node to meals node
-    graph[source_node][meals_node] = demand
+    graph[source_node].append([meals_node, demand])
 
     # Edge from meals to each person (with capacity equal to the remainder of meals possible for the person)
     for i in range(num_persons):
-        graph[meals_node][i + start_person_nodes] = max_meals - min_meals
+        graph[meals_node].append([i + start_person_nodes, max_meals - min_meals])
 
     # Edge from meals to order option
-    graph[meals_node][order_option_node] = max_order
+    graph[meals_node].append([order_option_node, max_order])
 
     # Edge from order option to every meal
     # Taking into account the allocated meals given by breakfast_min_flow and dinner_min_flow
@@ -283,10 +270,8 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
             if dinner_min_flow[day] != -1:
                 continue
 
-        graph[order_option_node][meal + start_meal_nodes] = 1
-
-        # Edge from the meal to sink node
-        graph[meal + start_meal_nodes][num_nodes - 1] = 1
+        graph[order_option_node].append([meal + start_meal_nodes, 1])
+        graph[meal + start_meal_nodes].append([num_nodes - 1, 1])
 
     # Edge from each person to each day they can prepare a meal
     # and edge from each day to each meal
@@ -298,55 +283,62 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
             if availability[day][person] == 1 and breakfast_min_flow[day] == -1:
                 # Add edge from person to the day
                 # Capacity is one since each person can only prepare one meal for each day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. breakfast)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
-                # Edge from the meal to super sink node
-                graph[(day * 2) + start_meal_nodes][num_nodes - 1] = 1
+                graph[person + start_person_nodes].append([day + start_day_nodes, 1])
+                # If the meal node is not connected to sink yet, add edge from day to meal
+                if len(graph[(day * 2) + start_meal_nodes]) == 0:
+                    graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes, 1])
+                    # Edge from the meal to super sink node
+                    graph[(day * 2) + start_meal_nodes].append([num_nodes - 1, 1])
 
             # If the person can prepare dinner for that day and dinner for that day is not allocated yet
             elif availability[day][person] == 2 and dinner_min_flow[day] == -1:
                 # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. dinner)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
-                # Edge from the meal to super sink node
-                graph[(day * 2) + start_meal_nodes + 1][num_nodes - 1] = 1
+                graph[person + start_person_nodes].append([day + start_day_nodes, 1])
+                # If the meal node is not connected to sink yet, add edge from day to meal
+                if len(graph[(day * 2) + start_meal_nodes + 1]) == 0:
+                    graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes + 1, 1])
+                    # Edge from the meal to super sink node
+                    graph[(day * 2) + start_meal_nodes + 1].append([num_nodes - 1, 1])
 
             # If the person can prepare breakfast and dinner for that day
             # and only dinner has been allocated (breakfast is not allocated yet)
             elif availability[day][person] == 3 and dinner_min_flow[day] > -1 and breakfast_min_flow[day] == -1\
                     and dinner_min_flow[day] != person:
                 # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. breakfast)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
-                # Edge from the meal to super sink node
-                graph[(day * 2) + start_meal_nodes][num_nodes - 1] = 1
+                graph[person + start_person_nodes].append([day + start_day_nodes, 1])
+                # If the meal node is not connected to sink yet, add edge from day to meal
+                if len(graph[(day * 2) + start_meal_nodes]) == 0:
+                    graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes, 1])
+                    # Edge from the meal to super sink node
+                    graph[(day * 2) + start_meal_nodes].append([num_nodes - 1, 1])
 
             # If the person can prepare breakfast and dinner for that day
             # and only breakfast has been allocated (dinner is not allocated yet)
             elif availability[day][person] == 3 and breakfast_min_flow[day] > -1 and dinner_min_flow[day] == -1\
                     and breakfast_min_flow[day] != person:
                 # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. dinner)
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
-                # Edge from the meal to super sink node
-                graph[(day * 2) + start_meal_nodes + 1][num_nodes - 1] = 1
+                graph[person + start_person_nodes].append([day + start_day_nodes, 1])
+                # If the meal node is not connected to sink yet, add edge from day to meal
+                if len(graph[(day * 2) + start_meal_nodes + 1]) == 0:
+                    graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes + 1, 1])
+                    # Edge from the meal to super sink node
+                    graph[(day * 2) + start_meal_nodes + 1].append([num_nodes - 1, 1])
 
             # If the person can prepare breakfast and dinner for that day
             # and both breakfast and dinner is not allocated yet
             elif availability[day][person] == 3 and breakfast_min_flow[day] == -1 and dinner_min_flow[day] == -1:
                 # Add edge from person to the day
-                graph[person + start_person_nodes][day + start_day_nodes] = 1
-                # Add edge from the day to the corresponding meal of the day (i.e. breakfast and dinner)
-                # Add edge to both breakfast and dinner for the day
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes] = 1
-                graph[day + start_day_nodes][(day * 2) + start_meal_nodes + 1] = 1
-                # Edge from the meals to super sink node
-                graph[(day * 2) + start_meal_nodes][num_nodes - 1] = 1          # breakfast to sink
-                graph[(day * 2) + start_meal_nodes + 1][num_nodes - 1] = 1      # dinner to sink
+                graph[person + start_person_nodes].append([day + start_day_nodes, 1])
+                # If the meal node is not connected to sink yet, add edge from day to meal
+                if len(graph[(day * 2) + start_meal_nodes]) == 0:
+                    graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes, 1])
+                    # Edge from the meal to super sink node
+                    graph[(day * 2) + start_meal_nodes].append([num_nodes - 1, 1])
+                # If the meal node is not connected to sink yet, add edge from day to meal
+                if len(graph[(day * 2) + start_meal_nodes + 1]) == 0:
+                    graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes + 1, 1])
+                    # Edge from the meal to super sink node
+                    graph[(day * 2) + start_meal_nodes + 1].append([num_nodes - 1, 1])
 
     return graph
 
@@ -395,9 +387,10 @@ def bfs(availability, network, parent):
 
         # Looping through curr's adjacent nodes
         for i in range(len(network[curr])):
-            # If an adjacent node of curr has not been visited
-            if network[curr][i] > 0 and not visited[i]:
-
+            # If an adjacent node has a weight of more than 0 and of curr has not been visited
+            adjacent_node = network[curr][i][0]
+            weight_adjacent_node = network[curr][i][1]
+            if weight_adjacent_node > 0 and not visited[adjacent_node]:
                 # If curr is a meal node
                 if start_meal_nodes <= curr < start_meal_nodes + (n * 2):
                     # Check if the person is available for the meal
@@ -414,13 +407,13 @@ def bfs(availability, network, parent):
                             continue
 
                 # Append to the queue
-                queue.append(i)
+                queue.append(adjacent_node)
                 # Mark as visited
-                visited[i] = True
+                visited[adjacent_node] = True
                 # Mark curr as parent of the adjacent node
-                parent[i] = curr
+                parent[adjacent_node] = curr
                 # Checking if we have reached the sink node
-                if i == sink:
+                if adjacent_node == sink:
                     # If yes, return True to indicate that we have found an augmenting path
                     return True
 
@@ -503,12 +496,20 @@ def ford_fulkerson(availability, network):
         # Add the residual capacity found to the maximum flow of the network
         max_flow += 1       # Residual capacity will always be 1
 
-        # Updating the residual network by augmenting with the found residual capacity
+        # Updating the residual network by augmenting with the residual capacity
         curr = sink
         while curr != source:
             par = parent[curr]
-            network[par][curr] -= 1      # Reducing the residual edge
-            network[curr][par] += 1      # Incrementing the backward edge
+            # Reducing the residual edge
+            for i in range(len(network[par])):
+                if network[par][i][0] == curr:
+                    network[par][i][1] -= 1
+                    break
+            # Incrementing the backward edge
+            for i in range(len(network[curr])):
+                if network[curr][i][0] == par:
+                    network[curr][i][1] += 1
+                    break
 
             # Move backwards
             curr = parent[curr]
@@ -554,8 +555,17 @@ availability1 = [[2, 0, 2, 1, 2],
                  [0, 0, 3, 0, 2],
                  [0, 2, 0, 1, 0],
                  [1, 3, 3, 2, 0],
-                 [0, 0, 1, 2, 1],
-                 [2, 0, 0, 3, 0]]
+                 [0, 0, 1, 2, 1]]
+
+# Generating network flow with capacity equal to the lower bound
+# graph_min_flow = generate_network_min_flow(availability1)
+# print(graph_min_flow)
+# breakfast_min_flow, dinner_min_flow, max_flow_min = ford_fulkerson(availability1, graph_min_flow)
+
+# Generating network flow with adjusted capacities
+# graph_adjusted = generate_network_adjusted(availability1, breakfast_min_flow, dinner_min_flow)
+# print(graph_adjusted)
+# breakfast_adjusted, dinner_adjusted, max_flow_adjusted = ford_fulkerson(availability1, graph_adjusted)
 
 # print(allocate(availability1))
 
@@ -564,11 +574,9 @@ availability1 = [[2, 0, 2, 1, 2],
 def compare_subs(submission1, submission2):
     """
     Function that uses a retrieval data structure to compare two submissions and determine their similarity.
-
     :Input:
         submission1: first string to compare containing characters in the range [a-z] or space
         submission2: second string to compare containing characters in the range [a-z] or space
-
     :Output:
         res: list of findings with three elements:
             - the longest common substring between submission1 and submission2
@@ -576,10 +584,8 @@ def compare_subs(submission1, submission2):
               that belongs to the longest common substring, rounded to the nearest integer)
             - the similarity score for submission2 (expressed as the percentage of submission2
               that belongs to the longest common substring, rounded to the nearest integer)
-
     :Time Complexity: Needs to be O((N + M)^2)
     :Aux Space Complexity: Needs to be O(N + M)
-
     :Approach:
     """
     # Creating empty suffix tree
@@ -608,7 +614,6 @@ class SuffixTree:
     def __init__(self, string1, string2):
         """
         Constructor for SuffixTree class.
-
         :Input:
             string1: First string to add to the suffix tree
             string2: Second string to add to the suffix tree
@@ -622,7 +627,6 @@ class SuffixTree:
     def addSuffix(self, startNode, startIndex, length, isString1, isPartOfString1, isPartOfString2):
         """
         Method to add a suffix into the suffix tree.
-
         :Input:
             startNode: suffix tree node we are adding the suffix to
             startIndex: starting index of the suffix to add
@@ -630,9 +634,7 @@ class SuffixTree:
             isString1: boolean that represents whether the suffix is from string1
             isPartOfString1: boolean that represents whether the suffix is part of string1
             isPartOfString2: boolean that represents whether the suffix is part of string2
-
         :Post-condition: the suffix is added into the structure of the suffix tree
-
         Approach:
         TODO: Complete add_suffix approach
         """
@@ -648,31 +650,17 @@ class SuffixTree:
                 string_node = self.string1
             else:
                 string_node = self.string2
-
             # TODO: modify here so that it skips over if the letters are the same, don't break down immediately
-            # While the character in the suffix to add matches the index of the connected node
-            suffix_index = startIndex
-            node_index = node.startIndex
-            matched_length = 0
-            while suffix_index < startIndex + length and node_index < node.startIndex + node.length and \
-                    string[suffix_index] == string_node[node_index]:
-                # Increment the index to check
-                suffix_index += 1
-                node_index += 1
-                # Increment matched_length
-                matched_length += 1
-                # Mark matched_letter_found as True
-                matching_letter_found = True
-
-            if matching_letter_found:
+            # If the first character in the suffix to add matches the start index of the connected node
+            if string[startIndex] == string_node[node.startIndex]:
                 # If exists, make the remainder of the length into the matched node's child
-                if node.length - matched_length > 0:
-                    self.addSuffix(node, node.startIndex + matched_length, node.length - matched_length, node.isPartOfString1,
-                                   node.isPartOfString1, node.isPartOfString2)
+                if node.length > 1:
+                    self.addSuffix(node, node.startIndex + 1, node.length - 1, isString1, node.isPartOfString1,
+                                   node.isPartOfString2)
                     # And un-mark the node as an end
                     node.isEnd = False
-                # Adjust the matched node's length
-                node.length = matched_length
+                # Make the matched node into a node of length 1
+                node.length = 1
                 # Update isPartOfString1 and isPartOfString2 of the matched node
                 if isPartOfString1:
                     node.isPartOfString1 = True
@@ -681,18 +669,19 @@ class SuffixTree:
                 # If the matched node is part of both string1 and string2
                 # Update the common length
                 if node.isPartOfString1 and node.isPartOfString2:
-                    node.commonLength = startNode.commonLength + matched_length
+                    node.commonLength = startNode.commonLength + 1
                     # If the node's commonLength is greater than the current maxLength of the tree
                     if node.commonLength > self.maxLength:
                         self.maxLength = node.commonLength
-                # If the suffix to add fully matches the matched substring, mark the matched node as an end
-                if length - matched_length == 0:
+                # If the suffix to add is only one letter, then just mark the matched node as an end
+                if length == 1:
                     node.isEnd = True
-                # Else, make the remainder of the suffix a child of the matched node
+                # Else, make the remainder of the suffix to add a child of the matched node
                 else:
-                    self.addSuffix(node, startIndex + matched_length, length - matched_length, isString1,
-                                   isPartOfString1, isPartOfString2)
+                    self.addSuffix(node, startIndex + 1, length - 1, isString1, isPartOfString1, isPartOfString2)
 
+                # Mark matched_letter_found as True and break out of the for loop
+                matching_letter_found = True
                 break
 
         # Else if we have iterated through all the startNode's children and did not find a matching letter
@@ -701,19 +690,49 @@ class SuffixTree:
             startNode.children.append(SuffixTreeNode(startIndex, length, True, isPartOfString1, isPartOfString2))
 
     def build(self):
-            """
-            Method to build (i.e. fill up) the suffix tree
+        """
+        Method to build (i.e. fill up) the suffix tree
+        :Time Complexity: TODO: Complete time complexity build method
+        :Aux Space Complexity: TODO: Complete space complexity build method
+        """
+        # Inserting suffixes of submission1 into the suffix tree
+        for startIndex in range(len(self.string1)):
+            self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, True, False)
 
-            :Time Complexity: TODO: Complete time complexity build method
-            :Aux Space Complexity: TODO: Complete space complexity build method
-            """
-            # Inserting suffixes of submission1 into the suffix tree
-            for startIndex in range(len(self.string1)):
-                self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, True, False)
+        # Inserting suffixes of submission2 into the suffix tree
+        for startIndex in range(len(self.string2)):
+            self.addSuffix(self, startIndex, len(self.string2) - startIndex, False, False, True)
 
-            # Inserting suffixes of submission2 into the suffix tree
-            for startIndex in range(len(self.string2)):
-                self.addSuffix(self, startIndex, len(self.string2) - startIndex, False, False, True)
+    def compress(self):
+        # Iterate through each node in the suffix tree using DFS
+        # Stack to keep track of which nodes to visit first
+        # Visit the root's children first
+        stack = [node for node in self.children]
+
+        # Depth First Search
+        while stack:
+            # Pop the node to visit
+            curr = stack.pop()
+
+            # If the curr only has one child and they are part of the same string
+            if len(curr.children) == 1 and (curr.isPartOfString1 == curr.children[0].isPartOfString1) and \
+                    (curr.isPartOfString2 == curr.children[0].isPartOfString2):
+                # Do node compression
+                # Increment curr's length
+                curr.length += 1
+                # Set the child's children as curr's children
+                curr.children = curr.children[0].children
+                # Update isEnd
+                curr.isEnd = curr.children[0].isEnd
+                # Update commonLength
+                curr.commonLength = curr.children[0].commonLength
+                # Re-insert the node to the stack
+                stack.append(curr)
+                continue
+
+            # Append curr's children to the stack
+            for child in curr.children:
+                stack.append(child)
 
 
 class SuffixTreeNode:
@@ -723,7 +742,6 @@ class SuffixTreeNode:
     def __init__(self, startIndex, length, isEnd, isPartOfString1, isPartOfString2):
         """
         Constructor for SuffixTreeNode class.
-
         :Input:
             startIndex: starting index of the substring in the node
             length: length of the substring in the node
@@ -794,27 +812,28 @@ def build_longest_common_substring(max_node, submission1):
 # string1 = "referrer"
 # string2 = "referee"
 
-# string1 = "the lazy brown dog jumped over the lazy dog"
-# string2 = "my lazy dog has eaten my dog"
+# string1 = "the quick brown fox jumped over the lazy dog"
+# string2 = "my lazy dog has eaten my homework"
 
-string1 = "radix sort n counting sort ar sorting algos"
-string2 = "counting sort n radix sort ar sorting algos"
+string1 = "radix sort and counting sort are both non comparison sorting algorithms"
+string2 = "counting sort and radix sort are both non comparison sorting algorithms"
 
-# print(compare_subs(string1, string2))
+print(compare_subs(string1, string2))
 
-suffix_tree = SuffixTree(string1, string2)
-for startIndex in range(len(string1)):
-    suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
-
+# suffix_tree = SuffixTree(string1, string2)
+# for startIndex in range(len(string1)):
+#     suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
+#
 # for startIndex in range(len(string2)):
 #     suffix_tree.addSuffix(suffix_tree, startIndex, len(string2) - startIndex, False, False, True)
+#
+# suffix_tree.compress()
+#
+# for i in range(len(suffix_tree.children)):
+#     print(suffix_tree.children[i])
+#
+# print()
+#
+# for i in range(len(suffix_tree.children[0].children[0].children)):
+#     print(suffix_tree.children[0].children[0].children[i])
 
-for i in range(len(suffix_tree.children)):
-    print(suffix_tree.children[i])
-
-print()
-
-for i in range(len(suffix_tree.children[6].children)):
-    print(suffix_tree.children[6].children[i])
-
-# print(suffix_tree.maxLength)
