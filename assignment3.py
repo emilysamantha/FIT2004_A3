@@ -41,8 +41,9 @@ def allocate(availability):
     :Approach:
     This function uses the concept of circulation with demands and lower bounds problem. To solve it, the network flow
     is broken down into two graphs, graph_min_flow and graph_adjusted. graph_min_flow has capacity equal to the
-    lower bound, while graph_adjusted has capacity equal to the remainder of flow available from the main network flow.
-    We use Ford-Fulkerson's algorithm for finding maximum flow to
+    lower bound for the flow going into each person, while graph_adjusted has capacity equal to the remainder of
+    flow available from the minimum network flow. We use Ford-Fulkerson's algorithm to find the maximum flow in
+    both networks.
 
     A valid allocation exists if all outgoing edges from the source node in both graphs are saturated (i.e. has full
     capacity). We then merge the findings from these two graphs to construct the breakfast and dinner arrays.
@@ -80,7 +81,7 @@ def allocate(availability):
 
 def generate_network_min_flow(availability):
     """
-    Function that returns a network in adjacency matrix format.
+    Function that returns a network in adjacency list format.
 
     :Input:
         availability: list of lists that contains data about the time availability of each person.
@@ -89,8 +90,9 @@ def generate_network_min_flow(availability):
         graph: an adjacency matrix that represents the network flow for calculating the meal allocation,
                this network flow has capacities equal to the lower bound needed in the allocation
 
-    :Time Complexity: O(n^2)
-    :Aux Space Complexity: O(n^2), where n is the number of days
+    :Time Complexity: O(n)
+    :Aux Space Complexity: O(v + e), where v is the number of vertices in the network and e is the number of edges
+                           in the network (Here, both v and e are bounded by n)
 
     Nodes:
         - Source node
@@ -121,6 +123,14 @@ def generate_network_min_flow(availability):
            <<Here, P5 which is the order option node,
            does not have any edges connected to it
            because the lower bound for it is 0>>
+
+    :Approach:
+    We add an edge from source node to meals node with capacity of the minimum meals that need to be prepared by all
+    roommates. Then we add an edge from the meals to each person with capacity of the minimum number of meals prepared
+    by each person. Then from each person, we add an edge to each day they are able to prepare a meal with capacity
+    of 1. We add an edge from each day to its corresponding breakfast and dinner nodes with capacity of 1. And finally
+    we add an edge from every meal node to the sink node with capacity of 1.
+
     """
     # GENERAL INFORMATION
     num_persons = 5
@@ -139,15 +149,15 @@ def generate_network_min_flow(availability):
     num_nodes = 1 + 1 + (num_persons + 1) + (n * 3) + 1
     # source + meals + (num of people + order option) + (num of days * 3) + sink
 
-    # Generate empty graph
-    graph = [[] for _ in range(num_nodes)]           # O(n^2)
+    # Generate empty adjacency list
+    graph = [[] for _ in range(num_nodes)]                                              # O(n)
 
-    # Fill graph
+    # Fill adjacency list
     # Edge from source node to meals node
     graph[source_node].append([meals_node, demand])
 
     # Edge from meals to each person (with capacity equal to the lower bound)
-    for i in range(num_persons):
+    for i in range(num_persons):                                                        # O(1)
         graph[meals_node].append([i + start_person_nodes, min_meals])
 
     # No edge from meals to order option (Not required)
@@ -156,8 +166,8 @@ def generate_network_min_flow(availability):
 
     # Edge from each person to each day they can prepare a meal
     # and edge from each day to each meal
-    for day in range(n):                        # O(n)
-        for person in range(num_persons):
+    for day in range(n):                                                                # O(n)
+        for person in range(num_persons):                                               # O(1)
             # If the person can prepare a meal for that day
             if availability[day][person] > 0:
                 # Add edge from person to the day
@@ -165,12 +175,12 @@ def generate_network_min_flow(availability):
                 graph[person + start_person_nodes].append([day + start_day_nodes, 1])
 
     # Edge from every day to its breakfast and dinner nodes
-    for day in range(n):
+    for day in range(n):                                                                # O(n)
         graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes, 1])
         graph[day + start_day_nodes].append([(day * 2) + start_meal_nodes + 1, 1])
 
     # Edge from each meal to super sink node
-    for i in range(n * 2):                      # O(n^2)
+    for i in range(n * 2):                                                              # O(n)
         graph[i + start_meal_nodes].append([num_nodes - 1, 1])
 
     return graph
@@ -178,7 +188,7 @@ def generate_network_min_flow(availability):
 
 def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow):
     """
-    Function that returns a network in adjacency matrix format.
+    Function that returns a network in adjacency list format.
 
     :Input:
         availability: list of lists that contains data about the time availability of each person.
@@ -188,8 +198,9 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
                this network flow has capacities equal to the remainder flow available after allocation
                using the min flow network
 
-    :Time Complexity: O(n^2)
-    :Aux Space Complexity: O(n^2), where n is the number of days
+    :Time Complexity: O(n)
+    :Aux Space Complexity: O(v + e), where v is the number of vertices in the network and e is the number of edges
+                           in the network (Here, both v and e are bounded by n)
 
     Nodes:
         - Source node
@@ -219,6 +230,15 @@ def generate_network_adjusted(availability, breakfast_min_flow, dinner_min_flow)
            |-->P5                   D5                M10---|
            <<Here, we add an edge to P5 which is
            the order option node, >>
+
+    :Approach:
+    We add an edge from source node to meals node with capacity of the remainder of meals that need to be prepared by
+    all roommates after accounting for the minimum. Then we add an edge from the meals to each person with capacity of
+    the remainder number of meals that can be prepared by each person (i.e. max meals - min meals). Then from each
+    person, we add an edge to each day they are able to prepare a meal with capacity of 1. However, here we do an
+    extra check and only add the edge if their availability fills an unallocated meal from the previous network.
+    We add an edge from each day to its corresponding breakfast and dinner nodes with capacity of 1. And finally
+    we add an edge from the meal node to the sink node with capacity of 1.
     """
     # GENERAL INFORMATION
     num_persons = 5
@@ -349,14 +369,24 @@ def bfs(availability, network, parent):
 
     :Input:
         availability: list of lists that contains data about the time availability of each person.
-        network: adjacency matrix representation of network to apply BFS to
+        network: adjacency list representation of network to apply BFS to
         parent: list that stores the immediate parent of a node in the BFS path
     :Output:
         Returns True if there exists a simple path from the source node to the sink node.
         Returns False otherwise.
 
-    :Time Complexity: O(n)
+    :Time Complexity: O(v + e), where v is the number of vertices in the network and e is the number of edges
+                      in the network (Here, both v and e are bounded by n)
     :Aux Space Complexity: O(n)
+
+    :Approach:
+    We do regular breadth first search, but we do a check to see if we have reached the sink node. If so, return True
+    and stop the search. This way, this bfs method is able to tell whether there is an augmenting path inside the
+    network.
+
+    We also do an extra check everytime we reach a meal node to check if the connected person is actually available for
+    that meal (breakfast or dinner), because a person might be connected to the day but not connected to either the
+    breakfast or the dinner. If they are not available for that meal, then we ignore that path.
     """
     n = len(availability)
     source = 0
@@ -369,7 +399,7 @@ def bfs(availability, network, parent):
 
     # Array to keep track of which nodes have been visited
     # Initialize all nodes as not visited
-    visited = [False] * len(network)
+    visited = [False] * len(network)                            # O(n) space
 
     # Queue to keep track of which nodes to visit first
     queue = deque()
@@ -439,8 +469,12 @@ def ford_fulkerson(availability, network):
         dinner: array containing the person responsible to prepare each dinner over n days
         max_flow: the maximum flow found by the algorithm
 
-    :Time Complexity:
-    :Aux Space Complexity:
+    :Time Complexity: O(n^2)
+    :Aux Space Complexity: O(n)
+
+    :Approach:
+    We do regular Ford-Fulkerson algorithm by augmenting a path while there exists one. We add a modification to
+    record the breakfast and dinner allocations everytime we augment a path.
     """
     n = len(availability)
     source = 0
@@ -453,20 +487,20 @@ def ford_fulkerson(availability, network):
     start_meal_nodes = start_day_nodes + n
 
     # Initialize array to store parent of each node in the path
-    parent = [-1] * len(network)
+    parent = [-1] * len(network)                                    # O(n) space
 
     # Initialize maximum flow to 0
     max_flow = 0
 
     # Initialize breakfast and dinner arrays
-    breakfast = [-1] * n
-    dinner = [-1] * n
+    breakfast = [-1] * n                                            # O(n) space
+    dinner = [-1] * n                                               # O(n) space
 
-    # While there is an augmenting path in the network
-    while bfs(availability, network, parent):
+    # While there is an augmenting path in the network              # Total: O(n^2)
+    while bfs(availability, network, parent):                       # Cost of running bfs once: O(n)
         # Starting from the sink node and going backwards until source
         curr = sink
-        while curr != source:
+        while curr != source:                                       # O (n)
             # If curr is a meal node
             if start_meal_nodes <= curr <= len(network) - 2:
                 # If the parent of the meal is the order option node
@@ -498,7 +532,7 @@ def ford_fulkerson(availability, network):
 
         # Updating the residual network by augmenting with the residual capacity
         curr = sink
-        while curr != source:
+        while curr != source:                                           # O(n)
             par = parent[curr]
             # Reducing the residual edge
             for i in range(len(network[par])):
@@ -514,7 +548,7 @@ def ford_fulkerson(availability, network):
             # Move backwards
             curr = parent[curr]
 
-    print(breakfast, dinner)
+    # print(breakfast, dinner)
 
     return breakfast, dinner, max_flow
 
@@ -584,9 +618,19 @@ def compare_subs(submission1, submission2):
               that belongs to the longest common substring, rounded to the nearest integer)
             - the similarity score for submission2 (expressed as the percentage of submission2
               that belongs to the longest common substring, rounded to the nearest integer)
-    :Time Complexity: Needs to be O((N + M)^2)
-    :Aux Space Complexity: Needs to be O(N + M)
+    :Time Complexity: O((N + M)^2)
+    :Aux Space Complexity: O((N + M)^2)
+
     :Approach:
+    We create a suffix trie that stores only the start index and length of each substring in each node. We then
+    compress this suffix trie into a suffix tree so that the space complexity taken by this tree is O(n).
+
+    This suffix tree will store two strings. We add all the suffixes of the first string to the tree and then add
+    all the suffixes of the second string.
+
+    We then traverse the suffix tree using DFS (which will cost O(n) after compressing) to find the node with the
+    maximum common length. We then build the longest common substring from this node. And finally we just calculate
+    the similarity scores for both strings.
     """
     # Creating empty suffix tree
     suffix_tree = SuffixTree(submission1, submission2)
@@ -623,8 +667,9 @@ class SuffixTree:
         self.children = []
         self.commonLength = 0
         self.maxLength = 0
+        self.counter = 0
 
-    def addSuffix(self, startNode, startIndex, length, isString1, isPartOfString1, isPartOfString2):
+    def addSuffix(self, startNode, startIndex, length, isPartOfString1, isPartOfString2):
         """
         Method to add a suffix into the suffix tree.
         :Input:
@@ -635,11 +680,19 @@ class SuffixTree:
             isPartOfString1: boolean that represents whether the suffix is part of string1
             isPartOfString2: boolean that represents whether the suffix is part of string2
         :Post-condition: the suffix is added into the structure of the suffix tree
-        Approach:
-        TODO: Complete add_suffix approach
+
+        :Approach:
+        We iterate through each child in the startNode's children and check if the first letter is the same as the first
+        letter of the suffix to add. If so, we break down the node by length of 1, i.e. we add the remainder of the
+        node's substring as a child of that node and set its length to 1, and also add the remainder of the suffix to
+        add as a child as well. This will be done recursively. We also update the isPartOfString2 when adding and
+        keep track of the common length. We also update the maxLength of the whole tree if a node's commonLength is
+        larger than the current one. We will use this maxLength value when finding the node with the maximum common
+        length using the DFS.
         """
+        self.counter += 1
         matching_letter_found = False
-        if isString1:
+        if isPartOfString1:
             string = self.string1
         else:
             string = self.string2
@@ -655,15 +708,13 @@ class SuffixTree:
             if string[startIndex] == string_node[node.startIndex]:
                 # If exists, make the remainder of the length into the matched node's child
                 if node.length > 1:
-                    self.addSuffix(node, node.startIndex + 1, node.length - 1, isString1, node.isPartOfString1,
+                    self.addSuffix(node, node.startIndex + 1, node.length - 1, node.isPartOfString1,
                                    node.isPartOfString2)
                     # And un-mark the node as an end
                     node.isEnd = False
                 # Make the matched node into a node of length 1
                 node.length = 1
-                # Update isPartOfString1 and isPartOfString2 of the matched node
-                if isPartOfString1:
-                    node.isPartOfString1 = True
+                # Update isPartOfString2 of the matched node
                 if isPartOfString2:
                     node.isPartOfString2 = True
                 # If the matched node is part of both string1 and string2
@@ -678,7 +729,7 @@ class SuffixTree:
                     node.isEnd = True
                 # Else, make the remainder of the suffix to add a child of the matched node
                 else:
-                    self.addSuffix(node, startIndex + 1, length - 1, isString1, isPartOfString1, isPartOfString2)
+                    self.addSuffix(node, startIndex + 1, length - 1, isPartOfString1, isPartOfString2)
 
                 # Mark matched_letter_found as True and break out of the for loop
                 matching_letter_found = True
@@ -692,18 +743,28 @@ class SuffixTree:
     def build(self):
         """
         Method to build (i.e. fill up) the suffix tree
-        :Time Complexity: TODO: Complete time complexity build method
-        :Aux Space Complexity: TODO: Complete space complexity build method
+
+        :Time Complexity: O((N+M)^2)
+        :Aux Space Complexity: O((N+M)^2)
         """
         # Inserting suffixes of submission1 into the suffix tree
         for startIndex in range(len(self.string1)):
-            self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, True, False)
+            self.addSuffix(self, startIndex, len(self.string1) - startIndex, True, False)
 
         # Inserting suffixes of submission2 into the suffix tree
         for startIndex in range(len(self.string2)):
-            self.addSuffix(self, startIndex, len(self.string2) - startIndex, False, False, True)
+            self.addSuffix(self, startIndex, len(self.string2) - startIndex, False, True)
+
+        # Compress to a suffix tree
+        self.compress()
 
     def compress(self):
+        """
+        Method to compress the suffix trie built into a suffix tree with O(n) space.
+
+        :Approach:
+        Using DFS approach, we check whether the current node only has one child
+        """
         # Iterate through each node in the suffix tree using DFS
         # Stack to keep track of which nodes to visit first
         # Visit the root's children first
@@ -714,18 +775,18 @@ class SuffixTree:
             # Pop the node to visit
             curr = stack.pop()
 
-            # If the curr only has one child and they are part of the same string
-            if len(curr.children) == 1 and (curr.isPartOfString1 == curr.children[0].isPartOfString1) and \
-                    (curr.isPartOfString2 == curr.children[0].isPartOfString2):
+            # If the curr only has one child, and they are part of the same string
+            if len(curr.children) == 1 and (curr.isPartOfString1 and curr.children[0].isPartOfString1) and \
+                    (curr.isPartOfString2 and curr.children[0].isPartOfString2):
                 # Do node compression
                 # Increment curr's length
                 curr.length += 1
-                # Set the child's children as curr's children
-                curr.children = curr.children[0].children
                 # Update isEnd
                 curr.isEnd = curr.children[0].isEnd
                 # Update commonLength
                 curr.commonLength = curr.children[0].commonLength
+                # Set the child's children as curr's children
+                curr.children = curr.children[0].children
                 # Re-insert the node to the stack
                 stack.append(curr)
                 continue
