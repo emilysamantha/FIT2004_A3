@@ -548,8 +548,6 @@ def ford_fulkerson(availability, network):
             # Move backwards
             curr = parent[curr]
 
-    # print(breakfast, dinner)
-
     return breakfast, dinner, max_flow
 
 
@@ -578,30 +576,6 @@ def merge_results(min_flow_results, adjusted_results):
             res.append(adjusted_results[i])
 
     return res
-
-
-# Testing task 1
-availability1 = [[2, 0, 2, 1, 2],
-                 [3, 3, 1, 0, 0],
-                 [0, 1, 0, 3, 0],
-                 [0, 0, 2, 0, 3],
-                 [1, 0, 0, 2, 1],
-                 [0, 0, 3, 0, 2],
-                 [0, 2, 0, 1, 0],
-                 [1, 3, 3, 2, 0],
-                 [0, 0, 1, 2, 1]]
-
-# Generating network flow with capacity equal to the lower bound
-# graph_min_flow = generate_network_min_flow(availability1)
-# print(graph_min_flow)
-# breakfast_min_flow, dinner_min_flow, max_flow_min = ford_fulkerson(availability1, graph_min_flow)
-
-# Generating network flow with adjusted capacities
-# graph_adjusted = generate_network_adjusted(availability1, breakfast_min_flow, dinner_min_flow)
-# print(graph_adjusted)
-# breakfast_adjusted, dinner_adjusted, max_flow_adjusted = ford_fulkerson(availability1, graph_adjusted)
-
-print(allocate(availability1))
 
 
 # Task 2 - Similarity Detector
@@ -911,34 +885,3 @@ def build_longest_common_substring(max_node, string1):
         curr_node = curr_node.parent
     longest_common_substring = "".join(longest_common_substring[::-1])
     return longest_common_substring
-
-
-# TESTING TASK 2
-# string1 = "referrer"
-# string2 = "referee"
-
-# string1 = "the quick brown fox jumped over the lazy dog"
-# string2 = "my lazy dog has eaten my homework"
-
-string1 = "radix sort and counting sort are both non comparison sorting algorithms"
-string2 = "counting sort and radix sort are both non comparison sorting algorithms"
-
-print(compare_subs(string1, string2))
-
-# suffix_tree = SuffixTree(string1, string2)
-# for startIndex in range(len(string1)):
-#     suffix_tree.addSuffix(suffix_tree, startIndex, len(string1) - startIndex, True, True, False)
-#
-# for startIndex in range(len(string2)):
-#     suffix_tree.addSuffix(suffix_tree, startIndex, len(string2) - startIndex, False, False, True)
-#
-# suffix_tree.compress()
-#
-# for i in range(len(suffix_tree.children)):
-#     print(suffix_tree.children[i])
-#
-# print()
-#
-# for i in range(len(suffix_tree.children[0].children[0].children)):
-#     print(suffix_tree.children[0].children[0].children[i])
-
