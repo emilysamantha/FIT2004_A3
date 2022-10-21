@@ -35,8 +35,8 @@ def allocate(availability):
           dinner[i] = j, if person j is allocated to prepare dinner on day i
           dinner[i] = 5, if dinner on day i will be ordered from a restaurant
 
-    :Time Complexity: Needs to be O(n^2), where n is the number of days
-    :Aux Space Complexity: Needs to be O(n^2), where n is the number of days
+    :Time Complexity: O(n^2), where n is the number of days
+    :Aux Space Complexity: O(n^2), where n is the number of days
 
     :Approach:
     This function uses the concept of circulation with demands and lower bounds problem. To solve it, the network flow
@@ -592,6 +592,7 @@ def compare_subs(submission1, submission2):
               that belongs to the longest common substring, rounded to the nearest integer)
             - the similarity score for submission2 (expressed as the percentage of submission2
               that belongs to the longest common substring, rounded to the nearest integer)
+
     :Time Complexity: O((N + M)^2), where N is the length of the first string and M is the length of the second string
     :Aux Space Complexity: O((N + M)^2), where N is the length of the first string and M is the length of the second
                            string
