@@ -601,7 +601,7 @@ availability1 = [[2, 0, 2, 1, 2],
 # print(graph_adjusted)
 # breakfast_adjusted, dinner_adjusted, max_flow_adjusted = ford_fulkerson(availability1, graph_adjusted)
 
-# print(allocate(availability1))
+print(allocate(availability1))
 
 
 # Task 2 - Similarity Detector
@@ -618,8 +618,9 @@ def compare_subs(submission1, submission2):
               that belongs to the longest common substring, rounded to the nearest integer)
             - the similarity score for submission2 (expressed as the percentage of submission2
               that belongs to the longest common substring, rounded to the nearest integer)
-    :Time Complexity: O((N + M)^2)
-    :Aux Space Complexity: O((N + M)^2)
+    :Time Complexity: O((N + M)^2), where N is the length of the first string and M is the length of the second string
+    :Aux Space Complexity: O((N + M)^2), where N is the length of the first string and M is the length of the second
+                           string
 
     :Approach:
     We create a suffix trie that stores only the start index and length of each substring in each node. We then
@@ -744,8 +745,9 @@ class SuffixTree:
         """
         Method to build (i.e. fill up) the suffix tree
 
-        :Time Complexity: O((N+M)^2)
-        :Aux Space Complexity: O((N+M)^2)
+        :Time Complexity: O((N+M)^2), where N is the length of the first string and M is the length of the second string
+        :Aux Space Complexity: O((N+M)^2), where N is the length of the first string and M is the length of the second
+                               string
         """
         # Inserting suffixes of submission1 into the suffix tree
         for startIndex in range(len(self.string1)):
@@ -762,8 +764,16 @@ class SuffixTree:
         """
         Method to compress the suffix trie built into a suffix tree with O(n) space.
 
+        :Input: none
+        :Post-condition: the suffix trie is compressed into a suffix tree with O(N +M) space
+
+        :Time Complexity: O(N + M), where N is the length of the first string and M is the length of the second string
+        :Aux Space Complexity: O(1)
+
         :Approach:
-        Using DFS approach, we check whether the current node only has one child
+        Using DFS approach, we check whether the current node only has one child, if so, also check if they are both
+        part of both string1 and string2. If so, compress them into one node by incrementing the length of the current
+        node and setting the children of the child as the current node's children.
         """
         # Iterate through each node in the suffix tree using DFS
         # Stack to keep track of which nodes to visit first
@@ -807,8 +817,8 @@ class SuffixTreeNode:
             startIndex: starting index of the substring in the node
             length: length of the substring in the node
             isEnd: boolean that indicates whether the node is
-            isPartOfString1:
-            isPartOfString2:
+            isPartOfString1: boolean that indicates if the suffix to add is part of string1
+            isPartOfString2: boolean that indicates if the suffix to add is part of string2
         """
         self.startIndex = startIndex
         self.length = length
@@ -826,6 +836,23 @@ class SuffixTreeNode:
 
 
 def findMaxNode(suffixTree):
+    """
+    Function that returns the node with commonLength equal to the maxLength (i.e. the last node of the
+    longest common string)
+
+    :Input: SuffixTree object that represents the suffix tree to traverse
+    :Output: SuffixTreeNode object that represents the node in the suffix tree that has a commonLength attribute
+             equal to the maxLength in the tree
+
+    :Time Complexity: O(N + M)
+    :Aux Space Complexity: O(1)
+
+    :Approach:
+    Uses DFS concept to traverse the tree, only appending to the stack if the node is part of both strings.
+    If we have reached a node that does not have any children that belongs to both nodes, it means we have
+    reached the end of the common sub-string of both strings. Once we have reached this node, check whether the
+    commonLength is equal to maxLength of the tree, and if so return the node.
+    """
     # Stack to keep track of which nodes to visit first
     # Visit the root first
     stack = [suffixTree]
@@ -859,11 +886,28 @@ def findMaxNode(suffixTree):
                 return curr
 
 
-def build_longest_common_substring(max_node, submission1):
+def build_longest_common_substring(max_node, string1):
+    """
+    Function to construct the longest common sub-string from the maxNode.
+
+    :Input:
+        maxNode: SuffixTreeNode object with commonLength equal to the maxLength of the suffix tree (i.e. the node
+                 that gets returned by the findMaxNode function)
+        string1: the first string of the suffix tree
+    :Output:
+        longest_common_substring: the longest common substring in the suffix tree
+
+    :Time Complexity: O(N + M)
+    :Aux Space Complexity: O((N + M))
+
+    :Approach:
+    While we have not reached the root node, append the current node's substring to the result. We set the parent as
+    the current node and repeat.
+    """
     longest_common_substring = []
     curr_node = max_node
     while curr_node.commonLength != 0:
-        longest_common_substring.append(submission1[curr_node.startIndex:curr_node.startIndex + curr_node.length])
+        longest_common_substring.append(string1[curr_node.startIndex:curr_node.startIndex + curr_node.length])
         curr_node = curr_node.parent
     longest_common_substring = "".join(longest_common_substring[::-1])
     return longest_common_substring
